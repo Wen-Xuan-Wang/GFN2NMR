@@ -1,0 +1,95 @@
+#! /usr/bin/env python
+import sys
+import torch
+class Arguments():
+    charge = 0
+    crest_arg = ' -gfnff '
+    xyz = 'default.xyz'
+    exp_data = ' '
+    conf_search = True
+    energy_cutoff = 3 #kcal/mol
+    pre_opt = False
+    device = torch.device('cpu')
+    continue_mode = True
+    draw2d = False
+    help = ['GFN2NMR: A deep graph neural network for fast and accurate 13C NMR chemical shifts calculation',
+                'Version 1.3. Author: Wen-Xuan Wang. Email: wenxuanwang@tom.com',
+                'Arguments:',
+                '-chrg <INT> : the number of net charges. Default: 0',
+                '-cs_method gfnff/gfn0/gfn1/gfn2 : Method for crest conformational search, Default: gfnff',
+                '-energy_cutoff <Float> : The energy window used to remove high energy conformers. Default: 3 Kcal/Mol.',
+                '-pre_opt : Pre-optimize the initial coordinates with GFN-xTB, to avoid the errors caused by poor initial geometry. ',
+                '-nocs : Switch off conformational search.',
+                '-d cuda/cpu/auto : choose the device to load model. Default: cpu',
+                '-draw2d : Output 2D structure with chemical shifts labeled. Default: False',
+                '-cmoff : Switch off the continue_mode. gfn2nmr will clean the work directory.',
+                '      With default setting, GFN2NMR will automatically search the files for conformation search (crest_conformers.xyz or crest_ensemble.xyz) and continue the calculation process.',
+                '      It is useful when users want to continue an interrupted job or start calculation from a custom conformation ensemble.',
+                '      However, if the former calculation has error occurred, it is recommended to use -cmoff to clean the old files.'
+                ]
+
+    def __init__(self,inputs):
+        print(f'\033[1;36m{self.help[0]}\033[0m')
+        print(f'\033[1;36m{self.help[1]}\033[0m')
+        for i in range(len(inputs)):
+            if inputs[i] == '-h':
+                for j in range(2,len(self.help)):
+                    print(self.help[j])
+                quit()
+            if '.xyz' in inputs[i]:
+                self.xyz = inputs[i]
+                self.exp_data = inputs[i][:-3] + 'txt'
+            if inputs[i] == '-chrg':
+                try:
+                    self.charge = int(inputs[i+1])
+                except (ValueError):
+                    print("\033[1;31mError! Invalid input for -chrg\033[0m")
+                    quit()
+
+            if inputs[i] == '-cs_method' :
+                if inputs[i+1] == 'gfnff':
+                    self.crest_arg = ' -gfnff '
+                elif inputs[i+1] == 'gfn0':
+                    self.crest_arg = ' -gfn0 '
+                elif inputs[i+1] == 'gfn1':
+                    self.crest_arg = ' -gfn1 '
+                elif inputs[i+1] == 'gfn2':
+                    self.crest_arg = ' -gfn2 '
+                else:
+                    print("\033[1;31mError! Invalid input for -cs_method\033[0m")
+                    quit()
+
+            if  inputs[i] == '-energy_cutoff' :
+                try:
+                    self.energy_cutoff = float(inputs[i+1])
+                except (ValueError):
+                    print("\033[1;31mError! Invalid input for -energy_cutoff\033[0m")
+                    quit()
+            
+            if  inputs[i] == '-pre_opt':
+                self.pre_opt = True
+            
+            if  inputs[i] == '-nocs':
+                self.conf_search = False
+            if inputs[i] == '-d':
+                if inputs[i+1] == 'cpu':
+                    pass
+                elif inputs[i+1] == 'cuda':
+                    self.device = torch.device('cuda')
+                elif inputs[i+1] == 'auto':
+                    self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+                else:
+                    print("\033[1;31mError! Invalid input for -d\033[0m")
+            if inputs[i] == '-cmoff':
+                self.continue_mode = False
+            if inputs[i] == '-draw2d':
+                self.draw2d = True
+
+
+
+
+arg = Arguments(sys.argv[1:])
+
+from gfn2nmr_core import calculation
+
+calculation(arg)

@@ -1,0 +1,263 @@
+#! /usr/bin/env python
+from PyQt5 import QtCore, QtGui, QtWidgets
+from PyQt5.Qt import QApplication,QMainWindow,QWidget,QMessageBox
+from PyQt5.QtWidgets import QFileDialog
+import sys
+import os
+import torch
+from gfn2nmr_core import calculation
+
+class Arguments():
+    charge = 0
+    crest_arg = ' -gfnff '
+    xyz = 'default.xyz'
+    exp_data = ' '
+    conf_search = True
+    energy_cutoff = 3 #kcal/mol
+    pre_opt = False
+    device = torch.device('cpu')
+    continue_mode = True
+    draw2d = False
+class Job(QtCore.QThread):
+    def __init__(self,args):
+        super().__init__()
+        self.args =  args
+    def run(self):
+        calculation(self.args)
+
+class mainwindow(QMainWindow):  #The main window of UI
+    def __init__(self):
+        super(mainwindow, self).__init__()
+        self.setObjectName("MainWindow")
+        self.resize(1350, 592)
+        self.centralwidget = QtWidgets.QWidget(self)
+        self.centralwidget.setObjectName("centralwidget")
+        self.verticalLayoutWidget = QtWidgets.QWidget(self.centralwidget)
+        self.verticalLayoutWidget.setGeometry(QtCore.QRect(850, 110, 452, 311))
+        self.verticalLayoutWidget.setObjectName("verticalLayoutWidget")
+        self.verticalLayout = QtWidgets.QVBoxLayout(self.verticalLayoutWidget)
+        self.verticalLayout.setContentsMargins(0, 0, 0, 0)
+        self.verticalLayout.setObjectName("verticalLayout")
+        self.pre_opt = QtWidgets.QCheckBox(self.verticalLayoutWidget)
+        self.pre_opt.setObjectName("pre_opt")
+        self.verticalLayout.addWidget(self.pre_opt)
+        self.no_cs = QtWidgets.QCheckBox(self.verticalLayoutWidget)
+        self.no_cs.setObjectName("no_cs")
+        self.verticalLayout.addWidget(self.no_cs)
+        self.draw2d = QtWidgets.QCheckBox(self.verticalLayoutWidget)
+        self.draw2d.setObjectName("draw2d")
+        self.verticalLayout.addWidget(self.draw2d)
+        self.cmoff = QtWidgets.QCheckBox(self.verticalLayoutWidget)
+        self.cmoff.setObjectName("cmoff")
+        self.verticalLayout.addWidget(self.cmoff)
+        self.verticalLayoutWidget_2 = QtWidgets.QWidget(self.centralwidget)
+        self.verticalLayoutWidget_2.setGeometry(QtCore.QRect(430, 110, 201, 311))
+        self.verticalLayoutWidget_2.setObjectName("verticalLayoutWidget_2")
+        self.verticalLayout_2 = QtWidgets.QVBoxLayout(self.verticalLayoutWidget_2)
+        self.verticalLayout_2.setContentsMargins(0, 0, 0, 0)
+        self.verticalLayout_2.setObjectName("verticalLayout_2")
+        self.m_cs = QtWidgets.QComboBox(self.verticalLayoutWidget_2)
+        self.m_cs.setObjectName("m_cs")
+        self.verticalLayout_2.addWidget(self.m_cs)
+        self.device_load = QtWidgets.QComboBox(self.verticalLayoutWidget_2)
+        self.device_load.setObjectName("device_load")
+        self.verticalLayout_2.addWidget(self.device_load)
+        self.Cutoff_E = QtWidgets.QSpinBox(self.verticalLayoutWidget_2)
+        self.Cutoff_E.setObjectName("Cutoff_E")
+        self.Cutoff_E.setSuffix(" Kcal/mol")
+        
+        self.verticalLayout_2.addWidget(self.Cutoff_E)
+        self.chrg = QtWidgets.QSpinBox(self.verticalLayoutWidget_2)
+        self.chrg.setMinimum(-99)
+        self.chrg.setObjectName("chrg")
+        self.verticalLayout_2.addWidget(self.chrg)
+        self.select_file = QtWidgets.QPushButton(self.centralwidget)
+        self.select_file.setGeometry(QtCore.QRect(100, 40, 150, 46))
+        font = QtGui.QFont()
+        font.setFamily("Arial")
+        font.setBold(True)
+        font.setWeight(75)
+        self.select_file.setFont(font)
+        self.select_file.setObjectName("select_file")
+        self.label = QtWidgets.QLabel(self.centralwidget)
+        self.label.setGeometry(QtCore.QRect(220, 150, 201, 31))
+        font = QtGui.QFont()
+        font.setFamily("Arial")
+        font.setBold(True)
+        font.setWeight(75)
+        self.label.setFont(font)
+        self.label.setObjectName("label")
+        self.label_2 = QtWidgets.QLabel(self.centralwidget)
+        self.label_2.setGeometry(QtCore.QRect(220, 290, 181, 31))
+        font = QtGui.QFont()
+        font.setFamily("Arial")
+        font.setBold(True)
+        font.setWeight(75)
+        self.label_2.setFont(font)
+        self.label_2.setObjectName("label_2")
+        self.label_3 = QtWidgets.QLabel(self.centralwidget)
+        self.label_3.setGeometry(QtCore.QRect(220, 220, 161, 31))
+        font = QtGui.QFont()
+        font.setFamily("Arial")
+        font.setBold(True)
+        font.setWeight(75)
+        self.label_3.setFont(font)
+        self.label_3.setObjectName("label_3")
+        self.label_4 = QtWidgets.QLabel(self.centralwidget)
+        self.label_4.setGeometry(QtCore.QRect(220, 350, 101, 31))
+        font = QtGui.QFont()
+        font.setFamily("Arial")
+        font.setBold(True)
+        font.setWeight(75)
+        self.label_4.setFont(font)
+        self.label_4.setObjectName("label_4")
+        self.run = QtWidgets.QPushButton(self.centralwidget)
+        self.run.setGeometry(QtCore.QRect(610, 440, 150, 46))
+        self.run.setObjectName("run")
+
+        self.file_path = QtWidgets.QLineEdit(self.centralwidget)
+        self.file_path.setGeometry(QtCore.QRect(300, 50, 1001, 31))
+        self.file_path.setObjectName("file_path")
+        self.setCentralWidget(self.centralwidget)
+        self.menubar = QtWidgets.QMenuBar(self)
+        self.menubar.setGeometry(QtCore.QRect(0, 0, 1350, 37))
+        self.menubar.setObjectName("menubar")
+        self.menuFile = QtWidgets.QMenu(self.menubar)
+        self.menuFile.setObjectName("menuFile")
+        self.menuHelp = QtWidgets.QMenu(self.menubar)
+        self.menuHelp.setObjectName("menuHelp")
+        self.setMenuBar(self.menubar)
+        self.statusbar = QtWidgets.QStatusBar(self)
+        self.statusbar.setObjectName("statusbar")
+        self.setStatusBar(self.statusbar)
+        self.actionSelect_file = QtWidgets.QAction(self)
+        self.actionSelect_file.setObjectName("actionSelect_file")
+        self.actionExit = QtWidgets.QAction(self)
+        self.actionExit.setObjectName("actionExit")
+        self.actionDocument = QtWidgets.QAction(self)
+        self.actionDocument.setObjectName("actionDocument")
+        self.actionAbout = QtWidgets.QAction(self)
+        self.actionAbout.setObjectName("actionAbout")
+        self.menuFile.addAction(self.actionSelect_file)
+        self.menuFile.addAction(self.actionExit)
+        self.menuHelp.addAction(self.actionDocument)
+        self.menuHelp.addAction(self.actionAbout)
+        self.menubar.addAction(self.menuFile.menuAction())
+        self.menubar.addAction(self.menuHelp.menuAction())
+        self.retranslateUi(self)
+        QtCore.QMetaObject.connectSlotsByName(self)
+
+        #parameters for gfn2nmr stores here
+        self.path = " " #save the file path
+        self.select_file.clicked.connect(self.select_file_) # click to select xyz file
+        self.actionSelect_file.triggered.connect(self.select_file_) # click manu bar to select xyz file
+        self.actionExit.triggered.connect(self.exit_) # click manu bar to exit
+        self.device_load.addItems(["Auto","CUDA","CPU"]) # add items to load model
+        self.m_cs.addItems(["GFN-ff","GFN0","GFN1","GFN2"]) # add items for conformer searching method
+        self.run.clicked.connect(self.run_)
+        self.actionAbout.triggered.connect(self.about)
+        self.actionDocument.triggered.connect(self.document)
+
+    def retranslateUi(self, MainWindow):
+        _translate = QtCore.QCoreApplication.translate
+        MainWindow.setWindowTitle(_translate("MainWindow", "GFN2NMR v1.3 wenxuanwang@tom.com"))
+        self.pre_opt.setText(_translate("MainWindow", "Pre-optimization"))
+        self.no_cs.setText(_translate("MainWindow", "No conformer searching"))
+        self.draw2d.setText(_translate("MainWindow", "Draw 2D structures to view results"))
+        self.cmoff.setText(_translate("MainWindow", "Switch off continue mode"))
+        self.select_file.setText(_translate("MainWindow", "Select file"))
+        self.label.setText(_translate("MainWindow", "Method for conformer searching"))
+        self.label_2.setText(_translate("MainWindow", "Energy cut-off for conformers"))
+        self.label_3.setText(_translate("MainWindow", "Device for model loading"))
+        self.label_4.setText(_translate("MainWindow", "Charge"))
+        self.run.setText(_translate("MainWindow", "Run"))
+        
+        self.menuFile.setTitle(_translate("MainWindow", "File"))
+        self.menuHelp.setTitle(_translate("MainWindow", "Help"))
+        self.actionSelect_file.setText(_translate("MainWindow", "Select file"))
+        self.actionExit.setText(_translate("MainWindow", "Exit"))
+        self.actionDocument.setText(_translate("MainWindow", "Document"))
+        self.actionAbout.setText(_translate("MainWindow", "About"))
+        self.Cutoff_E.setValue(3)
+        self.wkdir = os.getcwd()
+
+    def select_file_(self): #function to select a xyz file
+        title = "Select a xyz file"
+        filter = "xyz file (*.xyz)"
+        self.path,_ = QFileDialog.getOpenFileName(self,title, self.wkdir, filter)   
+        self.file_path.setText(self.path)
+
+    def exit_(self):
+        exit()
+
+    def about(self):
+        QMessageBox.about(self,"About","Version 1.3. Author: Wen-Xuan Wang. Email: wenxuanwang@tom.com")
+    def document(self):
+        import subprocess
+        cmd = 'which gfn2nmr'
+        path = subprocess.getoutput(cmd)[:-7] + 'document.docx'
+        command_line = f'open {path}'
+        os.system(command_line)
+
+    def run_(self): # gather all parameters and run a task
+        
+        if self.file_path.displayText() == "":
+            self.dialog = QWidget()
+            QMessageBox.warning(self,"Warning","No xyz file input",QMessageBox.Close)
+        elif os.path.isfile(self.file_path.displayText()) == False:
+            QMessageBox.warning(self,"Warning","The xyz file does not exist",QMessageBox.Close)
+        else:
+                       
+            args = Arguments()#Store the arguments to pass all parameters
+            for i in range(4,len(self.file_path.displayText())+1):
+                if self.file_path.displayText()[-i] == '/':
+                    self.wkdir = self.file_path.displayText()[:-i]
+                    os.chdir(self.wkdir)
+                    args.xyz = self.file_path.displayText()[len(self.file_path.displayText())-i+1:]
+                    break
+            
+            args.charge = self.chrg.value()
+            args.energy_cutoff = self.Cutoff_E.value()
+
+            if self.device_load.currentText() == "Auto":
+                args.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+            elif self.device_load.currentText() == "CUDA":
+                args.device = torch.device('cuda')
+            elif self.device_load.currentText() == "CPU":
+                pass
+
+            if self.m_cs.currentText() == "GFN-ff":
+                pass
+            elif self.m_cs.currentText() == "GFN0":
+                args.crest_arg = ' -gfn0 '
+            elif self.m_cs.currentText() == "GFN1":
+                args.crest_arg = ' -gfn1 '
+            elif self.m_cs.currentText() == "GFN2":
+                args.crest_arg = ' -gfn2 '
+
+            if self.pre_opt.checkState() == 2:
+                args.pre_opt = True
+            if self.no_cs.checkState() == 2:
+                args.conf_search = False
+            if self.draw2d.checkState() == 2:
+                args.draw2d = True
+            if self.cmoff.checkState() == 2:
+                args.continue_mode = False
+
+            p = Job(args)   
+            p.start()
+            p.wait() #run calculation
+
+            QMessageBox.warning(self,"Message","Calculation finished",QMessageBox.Close)
+
+            if  args.draw2d:
+                command_line = f'open {args.xyz[:-4]}.png'
+                os.system(command_line)
+                
+if __name__ == '__main__':
+    app = QApplication(sys.argv)
+    demo = mainwindow()         
+    demo.show() 
+      
+    sys.exit(app.exec_())
+
